@@ -1,0 +1,6 @@
+{
+  "name": "Tada 2.0",
+  "description": "Tada is a web application that allows users to upload CSV or Excel files and interact with their data using natural language. It leverages the Google Gemini API to understand user queries, perform data analysis, and generate insightful visualizations and summaries.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
