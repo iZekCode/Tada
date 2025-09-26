@@ -12,14 +12,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
 
   const processFile = useCallback((file: File) => {
     if (!file) return;
 
     setIsLoading(true);
+    setLoadingMessage(`Processing "${file.name}"...`);
     setError(null);
-    setFileName(file.name);
 
     const reader = new FileReader();
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
@@ -61,14 +61,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
       } catch (err: any) {
         setError(err.message || 'Failed to process the file.');
         setIsLoading(false);
-        setFileName(null);
+        setLoadingMessage(null);
       }
     };
     
     reader.onerror = () => {
         setError('Failed to read the file.');
         setIsLoading(false);
-        setFileName(null);
+        setLoadingMessage(null);
     };
 
     if (fileExtension === 'csv') {
@@ -77,6 +77,45 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
       reader.readAsBinaryString(file);
     }
   }, [onDataLoaded]);
+  
+  const handleUseSampleData = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Loading sample data...');
+    setError(null);
+
+    try {
+      const response = await fetch('/sample.csv');
+      if (!response.ok) {
+        throw new Error(`Could not fetch sample.csv: ${response.statusText}`);
+      }
+      const csvText = await response.text();
+      
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true, dynamicTyping: true });
+      if (parsed.errors.length > 0) {
+        throw new Error(`Sample CSV Parsing Error: ${parsed.errors[0].message}`);
+      }
+      const jsonData = parsed.data as DataRecord[];
+      
+      if (jsonData.length === 0) {
+        throw new Error('The sample file is empty or could not be parsed correctly.');
+      }
+
+      const columns = Object.keys(jsonData[0]);
+      const metadata: FileMetadata = {
+        fileName: 'sample.csv',
+        columns,
+        rowCount: jsonData.length,
+        preview: jsonData.slice(0, 5),
+      };
+        
+      onDataLoaded(jsonData, metadata);
+
+    } catch (err: any) {
+      setError(err.message || 'Failed to process the sample file.');
+      setIsLoading(false);
+      setLoadingMessage(null);
+    }
+  };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -156,7 +195,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
         {isLoading ? (
             <div className="relative z-10 flex flex-col items-center justify-center space-y-4 text-white">
                 <LoaderIcon className="w-12 h-12 text-[#39FF14] animate-spin" />
-                <p className="font-medium">Processing "{fileName}"...</p>
+                <p className="font-medium">{loadingMessage}</p>
             </div>
         ) : (
           <>
@@ -186,21 +225,28 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
         )}
       </div>
 
-      <div className="mt-10">
+      <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
         <label
           htmlFor="file-upload"
-          className="relative inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-zinc-900 bg-gradient-to-r from-[#39FF14] to-[#00C9A7] rounded-lg shadow-lg cursor-pointer transition-transform duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`relative inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-zinc-900 bg-gradient-to-r from-[#39FF14] to-[#00C9A7] rounded-lg shadow-lg transition-transform duration-200 ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
           style={{boxShadow: '0 10px 30px -10px rgba(0, 201, 167, 0.6)'}}
         >
           {isLoading ? 'Loading...' : 'Upload Your Data'}
         </label>
+        <button
+          onClick={handleUseSampleData}
+          disabled={isLoading}
+          className="px-8 py-3 text-base font-semibold text-gray-300 bg-zinc-800 border border-zinc-700 rounded-lg shadow-md transition-colors hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Use sample data
+        </button>
       </div>
 
       <p className="mt-10 text-xs text-gray-500 tracking-wider">Powered by Gemini</p>
       
       {error && (
         <div className="mt-6 bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg w-full max-w-md" role="alert">
-            <p className="font-semibold">Upload Failed</p>
+            <p className="font-semibold">Operation Failed</p>
             <p className="text-sm">{error}</p>
         </div>
       )}

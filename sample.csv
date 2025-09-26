@@ -1,0 +1,41 @@
+OrderID,Product,Category,Price,Quantity,OrderDate,Country
+1,Laptop,Electronics,1200,1,2023-01-15,USA
+2,Smartphone,Electronics,800,2,2023-01-16,Canada
+3,T-Shirt,Apparel,25,5,2023-01-17,USA
+4,Jeans,Apparel,75,2,2023-01-18,UK
+5,Coffee Maker,Home Goods,100,1,2023-01-19,USA
+6,Book,Books,15,10,2023-01-20,Canada
+7,Headphones,Electronics,150,1,2023-01-21,Germany
+8,Sneakers,Footwear,120,1,2023-01-22,USA
+9,Backpack,Accessories,50,3,2023-01-23,UK
+10,Watch,Accessories,250,1,2023-01-24,Germany
+11,Laptop,Electronics,1250,1,2023-02-01,Canada
+12,Smartphone,Electronics,850,1,2023-02-02,USA
+13,Jacket,Apparel,150,1,2023-02-03,Germany
+14,Book,Books,20,5,2023-02-04,USA
+15,T-Shirt,Apparel,30,10,2023-02-05,Canada
+16,Coffee Maker,Home Goods,110,1,2023-02-06,UK
+17,Jeans,Apparel,80,2,2023-02-07,USA
+18,Headphones,Electronics,160,1,2023-02-08,Canada
+19,Sneakers,Footwear,130,1,2023-02-09,Germany
+20,Watch,Accessories,275,1,2023-02-10,USA
+21,Laptop,Electronics,1300,1,2023-03-01,UK
+22,Smartphone,Electronics,900,3,2023-03-02,USA
+23,Book,Books,18,8,2023-03-03,Canada
+24,T-Shirt,Apparel,28,15,2023-03-04,Germany
+25,Jeans,Apparel,85,3,2023-03-05,USA
+26,Coffee Maker,Home Goods,120,1,2023-03-06,Canada
+27,Headphones,Electronics,170,1,2023-03-07,UK
+28,Backpack,Accessories,55,2,2023-03-08,USA
+29,Sneakers,Footwear,140,1,2023-03-09,Germany
+30,Watch,Accessories,300,1,2023-03-10,Canada
+31,Laptop,Electronics,1150,2,2023-04-12,Germany
+32,Smartphone,Electronics,750,1,2023-04-13,USA
+33,T-Shirt,Apparel,22,20,2023-04-14,Canada
+34,Jeans,Apparel,70,4,2023-04-15,UK
+35,Book,Books,25,12,2023-04-16,USA
+36,Jacket,Apparel,180,1,2023-04-17,Germany
+37,Headphones,Electronics,180,1,2023-04-18,Canada
+38,Sneakers,Footwear,110,2,2023-04-19,USA
+39,Backpack,Accessories,60,1,2023-04-20,UK
+40,Watch,Accessories,320,1,2023-04-21,Germany
