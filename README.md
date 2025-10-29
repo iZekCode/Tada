@@ -66,7 +66,7 @@ This project is organized into components, services, and core application files.
 
 ### Services (`./services/`)
 
-- **`geminiService.ts`**: The engine of the application, responsible for all communication with the Google Gemini API (generating code, questions, classifications, and cleaning suggestions).
+- **`groqService.ts`**: The engine of the application, responsible for all communication with the Groq API (generating code, questions, classifications, and cleaning suggestions).
 - **`executionService.ts`**: Executes the untrusted JavaScript code received from the Gemini API in a sandboxed environment with a timeout.
 - **`profilingService.ts`**: Performs client-side data analysis to generate the initial data profile.
 
@@ -81,7 +81,7 @@ This project is organized into components, services, and core application files.
     - **Chat**: Ask questions in natural language. When a chart or table is generated, a "Pin" button appears.
     - **Dashboard**: View all pinned items. Users can arrange, resize, and edit widgets on the canvas.
 5.  **Query Handling**: In the chat, when a user sends a message:
-    - `App.tsx` calls `geminiService` to get executable JavaScript code.
+    - `App.tsx` calls `groqService` to get executable JavaScript code.
     - `executionService` runs the code to produce a result.
     - The result is displayed as a new AI message.
 6.  **Pinning**: Clicking the "Pin" button on a result adds it as a new widget to the `Dashboard`.

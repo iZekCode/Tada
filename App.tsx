@@ -9,7 +9,7 @@ import React, { useState, useCallback } from 'react';
 import type { Layout, Layouts } from 'react-grid-layout';
 import type { DataRecord, FileMetadata, Message, DataContext, AnalysisResult, DataQualityIssue, ColumnProfile, DashboardWidget } from './types';
 import { MessageType } from './types';
-import { getAnalysisCodes, generateSuggestedQuestions, classifyColumnTypes, generateCleaningCode } from './services/geminiService';
+import { getAnalysisCodes, generateSuggestedQuestions, classifyColumnTypes, generateCleaningCode } from './services/groqService';
 import { executeAnalysisCode, executeCleaningCode } from './services/executionService';
 import { profileData } from './services/profilingService';
 import FileUpload from './components/FileUpload';

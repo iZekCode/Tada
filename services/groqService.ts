@@ -1,15 +1,20 @@
-
-
-
-import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 import type { Message, AnalysisResult, DataRecord, FileMetadata, DataContext, DataQualityIssue } from '../types';
 import { MessageType } from '../types';
 
-if (!process.env.API_KEY) {
-    console.error("API_KEY environment variable not set.");
+if (!process.env.GROQ_API_KEY) {
+    console.error("GROQ_API_KEY environment variable not set.");
+    throw new Error("GROQ_API_KEY environment variable is required");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+console.log("GROQ_API_KEY available:", !!process.env.GROQ_API_KEY);
+
+// Configure OpenAI client with Groq settings
+const client = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY || '',  // Need to provide a default value
+    baseURL: "https://api.groq.com/openai/v1",
+    dangerouslyAllowBrowser: true  // Enable browser usage
+});
 
 const formatChatHistory = (history: Message[]): string => {
     if (!history || history.length === 0) return 'No conversation history yet.';
@@ -37,7 +42,6 @@ const formatChatHistory = (history: Message[]): string => {
         return ''; // Ignore system messages or other malformed messages
     }).filter(line => line).join('\n');
 };
-
 
 const generateMultiCodePrompt = (query: string, metadata: FileMetadata, context: DataContext | null, chatHistory: Message[]): string => {
     const dataSample = JSON.stringify(metadata.preview, null, 2);
@@ -115,24 +119,6 @@ Your entire response must be a single JSON object with the following keys:
   "sqlCode": "The complete SQL query."
 }
 
-**EXAMPLE (Bar Chart):**
-User Question: "Show total sales by city"
-Your JSON Response:
-{
-  "javascriptCode": "const salesByCity = data.reduce((acc, row) => { const city = row.city; const sales = parseFloat(row.sales) || 0; acc[city] = (acc[city] || 0) + sales; return acc; }, {}); const chartPayload = Object.entries(salesByCity).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value); const topCity = chartPayload.length > 0 ? chartPayload[0].name : 'N/A'; const summary = \`The analysis indicates that **\${topCity}** had the highest total sales.\`; return { type: 'chart', title: 'Total Sales by City', summary: summary, data: { chartType: 'bar', payload: chartPayload, drillDownQueryHint: 'Show sales by product for {name}' } };",
-  "pythonCode": "import pandas as pd\\n\\nsales_by_city = df.groupby('city')['sales'].sum().sort_values(ascending=False).reset_index()\\nprint(sales_by_city)",
-  "sqlCode": "SELECT city, SUM(sales) as total_sales FROM dataset GROUP BY city ORDER BY total_sales DESC;"
-}
-
-**EXAMPLE (Treemap):**
-User Question: "What is the market share by product category?"
-Your JSON Response:
-{
-  "javascriptCode": "const shareByCategory = data.reduce((acc, row) => { const category = row.category; const sales = parseFloat(row.sales) || 0; acc[category] = (acc[category] || 0) + sales; return acc; }, {}); const chartPayload = Object.entries(shareByCategory).map(([name, size]) => ({ name, size })); const summary = 'This treemap shows market share based on sales for each product category.'; return { type: 'chart', title: 'Market Share by Product Category', summary: summary, data: { chartType: 'treemap', payload: chartPayload } };",
-  "pythonCode": "import pandas as pd\\n\\nmarket_share = df.groupby('category')['sales'].sum().reset_index()\\nprint(market_share)",
-  "sqlCode": "SELECT category, SUM(sales) as total_sales FROM dataset GROUP BY category;"
-}
-
 Now, generate the JSON for the user's question.
 `;
 };
@@ -143,46 +129,32 @@ export const getAnalysisCodes = async (
     context: DataContext | null,
     chatHistory: Message[]
 ): Promise<{ javascriptCode: string; pythonCode: string; sqlCode: string; }> => {
-    if (!process.env.API_KEY) {
-        throw new Error('API key is not configured. Please set the API_KEY environment variable.');
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error('API key is not configured. Please set the GROQ_API_KEY environment variable.');
     }
 
     const prompt = generateMultiCodePrompt(query, metadata, context, chatHistory);
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-            }
+        const response = await client.chat.completions.create({
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            messages: [
+                { role: "system", content: "You are a data analysis expert. Please provide code to answer the user's question." },
+                { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" }
         });
         
-        const candidate = response.candidates?.[0];
-        if (!candidate) {
+        const candidate = response.choices[0];
+        if (!candidate || !candidate.message.content) {
             throw new Error("The AI returned an empty response.");
         }
-        
-        if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-             if (candidate.finishReason === 'SAFETY') {
-                 throw new Error("The generated code was blocked for safety reasons. Please modify your query and try again.");
-            }
-            if (candidate.finishReason === 'MAX_TOKENS') {
-                throw new Error("The generated code was too long and was cut off. Please try a more specific query.");
-            }
-            throw new Error(`The request could not be completed. (Reason: ${candidate.finishReason})`);
-        }
 
-        const responseText = response.text.trim();
-        if (!responseText) {
-            throw new Error("The AI returned an empty response body.");
-        }
-        
         let parsedResult;
         try {
-            parsedResult = JSON.parse(responseText);
+            parsedResult = JSON.parse(candidate.message.content);
         } catch(parseError) {
-             console.error("Failed to parse AI response as JSON:", responseText);
+             console.error("Failed to parse AI response as JSON:", candidate.message.content);
              throw new Error("Response from AI was not valid JSON. The AI might have returned an explanation or malformed text instead of the expected code object.");
         }
 
@@ -200,7 +172,7 @@ export const getAnalysisCodes = async (
         return { javascriptCode, pythonCode, sqlCode };
 
     } catch (error) {
-        console.error("Error getting code from Gemini:", error);
+        console.error("Error getting code from Groq:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while generating analysis code.";
         throw new Error(errorMessage);
     }
@@ -211,7 +183,7 @@ export const generateCleaningCode = async (
     metadata: FileMetadata,
     context: DataContext | null
 ): Promise<string> => {
-     if (!process.env.API_KEY) {
+     if (!process.env.GROQ_API_KEY) {
         throw new Error('API key is not configured.');
     }
     
@@ -276,20 +248,21 @@ return data.map(row => {
   return newRow;
 });
 
-Now, write the JavaScript function body to solve the specific issue provided.
-`;
+Now, write the JavaScript function body to solve the specific issue provided.`;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
-            contents: prompt
+        const response = await client.chat.completions.create({
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            messages: [
+                { role: "user", content: prompt }
+            ]
         });
-
-        const responseText = response.text
-          .trim()
-          .replace(/^```javascript/, '')
-          .replace(/^```js/, '')
-          .replace(/```$/, '');
+        
+        const responseText = response.choices[0]?.message?.content
+            ?.trim()
+            ?.replace(/^```javascript/, '')
+            ?.replace(/^```js/, '')
+            ?.replace(/```$/, '');
           
         if (!responseText) {
             throw new Error("The AI returned empty code.");
@@ -297,18 +270,17 @@ Now, write the JavaScript function body to solve the specific issue provided.
         
         return responseText;
     } catch (error) {
-        console.error("Error generating cleaning code from Gemini:", error);
+        console.error("Error generating cleaning code from Groq:", error);
         throw new Error(error instanceof Error ? error.message : "An unknown error occurred while generating the cleaning code.");
     }
 }
-
 
 export const generateSuggestedQuestions = async (
     metadata: FileMetadata,
     context: DataContext | null,
     chatHistory: Message[]
 ): Promise<string[]> => {
-    if (!process.env.API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
         return [];
     }
     
@@ -340,23 +312,20 @@ Example Response:
 `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        questions: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
-                        }
-                    }
-                }
-            }
+        const response = await client.chat.completions.create({
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            messages: [
+                { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" }
         });
-        const result = JSON.parse(response.text);
+
+        const responseText = response.choices[0]?.message?.content;
+        if (!responseText) {
+            return [];
+        }
+
+        const result = JSON.parse(responseText);
         return result?.questions || [];
     } catch (error) {
         console.error("Error generating suggested questions:", error);
@@ -374,7 +343,7 @@ export const classifyColumnTypes = async (
     dataSample: DataRecord[],
     context: DataContext | null
 ): Promise<Record<string, 'numeric' | 'categorical'>> => {
-    if (!process.env.API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
         throw new Error("API key is not configured.");
     }
     
@@ -441,34 +410,22 @@ Example Response for normalized columns ['Year', 'Sales', 'StoreID']:
   }
 }
 `;
-    
-    const properties = normalizedColumns.reduce((acc, col) => {
-      acc[col] = { type: Type.STRING };
-      return acc;
-    }, {} as Record<string, { type: Type }>);
-
-    const responseSchema = {
-        type: Type.OBJECT,
-        properties: {
-            classifications: {
-                type: Type.OBJECT,
-                properties,
-                // Enforce that all normalized columns must be present in the response.
-                required: normalizedColumns
-            }
-        }
-    };
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema,
-            }
+        const response = await client.chat.completions.create({
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            messages: [
+                { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" }
         });
-        const result = JSON.parse(response.text);
+
+        const responseText = response.choices[0]?.message?.content;
+        if (!responseText) {
+            throw new Error("AI did not return a response");
+        }
+
+        const result = JSON.parse(responseText);
         
         if (!result || !result.classifications || typeof result.classifications !== 'object') {
             throw new Error("AI did not return a valid classifications object.");
@@ -495,7 +452,7 @@ Example Response for normalized columns ['Year', 'Sales', 'StoreID']:
 
         return finalClassifications;
     } catch (error) {
-        console.error("Error classifying column types from Gemini:", error);
+        console.error("Error classifying column types from Groq:", error);
         throw new Error(error instanceof Error ? error.message : "An unknown error occurred during column classification.");
     }
 };
