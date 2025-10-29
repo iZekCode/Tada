@@ -30,8 +30,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
         let jsonData: DataRecord[];
 
         if (fileExtension === 'csv') {
-          const parsed = Papa.parse(data as string, { header: true, skipEmptyLines: true });
+          const parsed = Papa.parse(data as string, {
+            header: true,
+            skipEmptyLines: "greedy",  // Skip empty lines more aggressively
+            delimiter: ",",            // Explicitly set comma as delimiter
+            newline: "\n",            // Explicitly set newline character
+            quoteChar: '"',           // Explicitly set quote character
+            dynamicTyping: true,      // Automatically convert strings to numbers when possible
+            transformHeader: (header) => header.trim(),  // Clean up header names
+          });
           if (parsed.errors.length > 0) {
+              console.error('CSV parsing errors:', parsed.errors);
               throw new Error(`CSV Parsing Error: ${parsed.errors[0].message}`);
           }
           jsonData = parsed.data as DataRecord[];
@@ -90,13 +99,20 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
       }
       const csvText = await response.text();
       
-      const parsed = Papa.parse(csvText, { 
+      // Pre-process the CSV text to ensure consistent line endings
+      const normalizedCsvText = csvText.replace(/\r\n?/g, '\n').trim();
+      
+      const parsed = Papa.parse(normalizedCsvText, { 
         header: true, 
-        skipEmptyLines: true, 
-        dynamicTyping: true,
-        delimiter: ',', // Explicitly set the delimiter
-        newline: '\n',  // Explicitly set the newline character
-        quoteChar: '"' // Explicitly set the quote character
+        skipEmptyLines: "greedy",     // Skip empty lines more aggressively
+        dynamicTyping: true,          // Automatically convert strings to numbers
+        delimiter: ',',               // Explicitly set the delimiter
+        newline: '\n',               // Explicitly set the newline character
+        quoteChar: '"',              // Explicitly set the quote character
+        transformHeader: (header) => header.trim(),  // Clean up header names
+        error: (error) => {
+          console.error('Parsing error:', error);
+        },
       });
       
       if (parsed.errors.length > 0) {
