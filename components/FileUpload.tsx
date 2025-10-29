@@ -90,8 +90,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
       }
       const csvText = await response.text();
       
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true, dynamicTyping: true });
+      const parsed = Papa.parse(csvText, { 
+        header: true, 
+        skipEmptyLines: true, 
+        dynamicTyping: true,
+        delimiter: ',', // Explicitly set the delimiter
+        newline: '\n',  // Explicitly set the newline character
+        quoteChar: '"' // Explicitly set the quote character
+      });
+      
       if (parsed.errors.length > 0) {
+        console.error('CSV parsing errors:', parsed.errors);
         throw new Error(`Sample CSV Parsing Error: ${parsed.errors[0].message}`);
       }
       const jsonData = parsed.data as DataRecord[];
