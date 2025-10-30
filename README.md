@@ -2,7 +2,7 @@
 
 # Tada: Interactive Data Analysis Chat App
 
-Tada is a web application that allows users to upload CSV or Excel files and interact with their data using natural language. It leverages the Google Gemini API to understand user queries, perform data analysis, and generate insightful visualizations and summaries.
+Tada is a web application that allows users to upload CSV or Excel files and interact with their data using natural language. It leverages the Groq API to understand user queries, perform data analysis, and generate insightful visualizations and summaries.
 
 ## ✨ Features
 
@@ -24,7 +24,7 @@ Tada is a web application that allows users to upload CSV or Excel files and int
 ## 🚀 Tech Stack
 
 - **Frontend**: React, TypeScript, Tailwind CSS
-- **AI Engine**: Google Gemini API (`@google/genai`)
+- **AI Engine**: Groq API
 - **Charting**: Recharts
 - **Dashboard Layout**: React Grid Layout
 - **Data Parsing**: PapaParse (for CSV), SheetJS (for Excel)
@@ -67,7 +67,7 @@ This project is organized into components, services, and core application files.
 ### Services (`./services/`)
 
 - **`groqService.ts`**: The engine of the application, responsible for all communication with the Groq API (generating code, questions, classifications, and cleaning suggestions).
-- **`executionService.ts`**: Executes the untrusted JavaScript code received from the Gemini API in a sandboxed environment with a timeout.
+- **`executionService.ts`**: Executes the untrusted JavaScript code received from the Groq API in a sandboxed environment with a timeout.
 - **`profilingService.ts`**: Performs client-side data analysis to generate the initial data profile.
 
 ---
